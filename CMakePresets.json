@@ -24,7 +24,7 @@
           "type": "BOOL",
           "value": "OFF"
         }
-      }  
+      }
     },
     {
       "name": "windows-default",

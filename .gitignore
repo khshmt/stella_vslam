@@ -45,3 +45,7 @@ cmake-build-release/
 
 # vcpkg
 /3rd/vcpkg/
+
+#visual studo and visual studio coded
+.vscode/
+.vs/
