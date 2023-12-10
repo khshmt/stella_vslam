@@ -23,7 +23,10 @@
         "BUILD_SHARED_LIBS": {
           "type": "BOOL",
           "value": "OFF"
-        }
+        },
+        "BUILD_EXAMPLES": "ON",
+        "USE_PANGOLIN_VIEWER": "ON",
+        "USE_GTSAM": "OFF"
       }
     },
     {

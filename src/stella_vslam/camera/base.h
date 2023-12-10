@@ -19,7 +19,7 @@ enum class setup_type_t {
     RGBD = 2
 };
 
-const std::array<std::string, 3> setup_type_to_string = {{"Monocular", "Stereo", "RGBD"}};
+const std::array<std::string, 3> setup_type_to_string = {{"monocular", "stereo", "RGBD"}};
 
 enum class model_type_t {
     Perspective = 0,
@@ -28,7 +28,7 @@ enum class model_type_t {
     RadialDivision = 3
 };
 
-const std::array<std::string, 4> model_type_to_string = {{"Perspective", "Fisheye", "Equirectangular", "RadialDivision"}};
+const std::array<std::string, 4> model_type_to_string = {{"perspective", "fisheye", "equirectangular", "radialDivision"}};
 
 enum class color_order_t {
     Gray = 0,

@@ -8,6 +8,49 @@
 
 namespace stella_vslam {
 namespace util {
+// !Made by Hshmt
+stereo_rectifier::stereo_rectifier(const std::shared_ptr<stella_vslam::config>& cfg)
+    : model_type_(load_model_type(cfg->yaml_node_)) {
+    spdlog::debug("CONSTRUCT: util::stereo_rectifier");
+    if (cfg->yaml_node_["Camera"]["setup"].as<std::string>() != camera::setup_type_to_string[1]) {
+        throw std::runtime_error("When stereo rectification is used, 'setup' must be set to 'stereo'");
+    }
+    if (cfg->yaml_node_["Camera"]["model"].as<std::string>() != camera::model_type_to_string[0]) {
+        throw std::runtime_error("When stereo rectification is used, 'model' must be set to 'perspective'");
+    }
+    // set image size
+    const cv::Size img_size(cfg->yaml_node_["Camera"]["cols"].as<int>(), cfg->yaml_node_["Camera"]["rows"].as<int>());
+    // set camera matrices
+    const auto K_l = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["K_left"].as<std::vector<double>>());
+    const auto K_r = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["K_right"].as<std::vector<double>>());
+    // set rotation matrices
+    const auto R_l = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["R_left"].as<std::vector<double>>());
+    const auto R_r = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["R_right"].as<std::vector<double>>());
+    // set distortion parameters depending on the camera model
+    const auto D_l_vec = cfg->yaml_node_["StereoRectifier"]["D_left"].as<std::vector<double>>();
+    const auto D_r_vec = cfg->yaml_node_["StereoRectifier"]["D_right"].as<std::vector<double>>();
+    const auto D_l = parse_vector_as_mat(cv::Size(1, D_l_vec.size()), D_l_vec);
+    const auto D_r = parse_vector_as_mat(cv::Size(1, D_r_vec.size()), D_r_vec);
+    // get camera matrix after rectification
+    // const auto K_rect = static_cast<camera::perspective*>(camera)->cv_cam_matrix_;
+    const cv::Mat K_rect = (cv::Mat_<float>(3, 3) << cfg->yaml_node_["Camera"]["fx"].as<double>(), 0, cfg->yaml_node_["Camera"]["cx"].as<double>(), 0, cfg->yaml_node_["Camera"]["fy"].as<double>(), cfg->yaml_node_["Camera"]["cy"].as<double>(), 0, 0, 1);
+    // create undistortion maps
+    switch (model_type_) {
+        case camera::model_type_t::Perspective: {
+            cv::initUndistortRectifyMap(K_l, D_l, R_l, K_rect, img_size, CV_32F, undist_map_x_l_, undist_map_y_l_);
+            cv::initUndistortRectifyMap(K_r, D_r, R_r, K_rect, img_size, CV_32F, undist_map_x_r_, undist_map_y_r_);
+            break;
+        }
+        case camera::model_type_t::Fisheye: {
+            cv::fisheye::initUndistortRectifyMap(K_l, D_l, R_l, K_rect, img_size, CV_32F, undist_map_x_l_, undist_map_y_l_);
+            cv::fisheye::initUndistortRectifyMap(K_r, D_r, R_r, K_rect, img_size, CV_32F, undist_map_x_r_, undist_map_y_r_);
+            break;
+        }
+        default: {
+            throw std::runtime_error("Invalid model type for stereo rectification: " + cfg->yaml_node_["Camera"]["model"].as<std::string>());
+        }
+    }
+}
 
 stereo_rectifier::stereo_rectifier(const std::shared_ptr<stella_vslam::config>& cfg, camera::base* camera)
     : stereo_rectifier(camera,

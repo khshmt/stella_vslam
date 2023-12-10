@@ -14,6 +14,9 @@ namespace util {
 class stereo_rectifier {
 public:
     //! Constructor
+    explicit stereo_rectifier(const std::shared_ptr<config>& cfg);
+
+    //! Constructor
     explicit stereo_rectifier(const std::shared_ptr<config>& cfg, camera::base* camera);
 
     //! Constructor

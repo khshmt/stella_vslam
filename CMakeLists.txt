@@ -24,7 +24,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-option(BUILD_SHARED_LIBS "Build stella_vslam as a shared library" ON)
+option(BUILD_SHARED_LIBS "Build stella_vslam as a shared library" OFF)
+option(BUILD_TESTS "Build stella_vslam tests" OFF)
+option(BUILD_EXAMPLES "Build stella_vslam examples" OFF)
+option(USE_PANGOLIN_VIEWER "use Pangolin Viewer" OFF)
 
 # ----- Build selection -----
 
@@ -178,4 +181,8 @@ add_subdirectory(src)
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
+endif()
+
+if(BUILD_EXAMPLES)
+    add_subdirectory(example)
 endif()
