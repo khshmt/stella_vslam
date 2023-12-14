@@ -1,0 +1,115 @@
+# EuRoC stereo model
+
+# intrinsic parameters after stereo-rectification are written
+Camera:
+  name: "EuRoC stereo"
+  setup: "stereo"
+  model: "perspective"
+
+  # new "rectified" matrices is the first three cols of the projection matrix which is calculated with cv::stereoRectify()
+  # e.g. fx = P1[0][0] or P2[0][0], cx = P1[0][2] or P2[0][2]
+  #      fy = P1[1][1] or P2[1][1], cy = P1[1][2] or P2[1][2]
+
+  fx: 913.48594689
+  fy: 913.48594689
+  cx: 702.53717041
+  cy: 550.81620789
+
+  # there is no distortion after stereo rectification
+
+  k1: 0.0
+  k2: 0.0
+  p1: 0.0
+  p2: 0.0
+  k3: 0.0
+
+  # focal_x_baseline is -P2[0][3] which is calculated with cv::stereoRectify()
+
+  fps: 20.0
+  cols: 1376
+  rows: 1100
+  focal_x_baseline: 137.35913581
+  depth_threshold: 40
+
+  color_order: "Gray"
+
+# original intrinsic parameters (K, D) and stereo-recitification parameters (R)
+# matrices (K, R) are written in row-major order
+
+StereoRectifier:
+  K_left: [905.4983284480116 , 0.0, 698.0936105740767, 0.0, 914.182509325695, 543.1287104937094, 0.0, 0.0, 1.0]
+  D_left: [-0.16901285529852744, 0.09759909106559891, 0.0002693944435316611, -0.0004176901120625984, 0.0]
+  R_left:
+    [
+      0.99997378,
+      -0.00174101,
+      -0.00702842,
+      0.00172919,
+      0.99999708,
+      -0.00168787,
+      0.00703133,
+      0.00167567,
+      0.99997388,
+    ]
+  K_right: [904.0064383295445, 0.0, 691.4246244672361, 0.0, 912.7893844579327, 557.0879294326788, 0.0, 0.0, 1]
+  D_right: [-0.16407642566321382, 0.0912831150438801, 0.00045513991143244294, -8.209201903944362e-05, 0.0]
+  R_right:
+    [
+      0.99999023,
+      0.00252434,
+      -0.00362783,
+      -0.00251823,
+      0.99999541,
+      0.00168635,
+      0.00363207,
+      -0.0016772,
+      0.999992,
+    ]
+
+Preprocessing:
+  min_size: 800
+
+Feature:
+  name: "default ORB feature extraction setting"
+  scale_factor: 1.2
+  num_levels: 8
+  ini_fast_threshold: 20
+  min_fast_threshold: 7
+
+Mapping:
+  backend: "g2o"
+  baseline_dist_thr: 0.11007784219
+  redundant_obs_ratio_thr: 0.9
+  erase_temporal_keyframes: false
+  num_temporal_keyframes: 15
+
+Tracking:
+  backend: "g2o"
+  enable_temporal_keyframe_only_tracking: false
+
+KeyframeInserter:
+  wait_for_local_bundle_adjustment: false
+
+Relocalizer:
+  search_neighbor: true
+
+LoopDetector:
+  backend: "g2o"
+
+Initializer:
+  min_num_triangulated_pts: 100
+
+System:
+  map_format: "msgpack"
+
+PangolinViewer:
+  keyframe_size: 0.07
+  keyframe_line_width: 1
+  graph_line_width: 1
+  point_size: 2
+  camera_size: 0.08
+  camera_line_width: 3
+  viewpoint_x: 0
+  viewpoint_y: -0.65
+  viewpoint_z: -1.9
+  viewpoint_f: 400

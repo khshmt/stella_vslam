@@ -24,8 +24,9 @@ stereo_rectifier::stereo_rectifier(const std::shared_ptr<stella_vslam::config>& 
     const auto K_l = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["K_left"].as<std::vector<double>>());
     const auto K_r = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["K_right"].as<std::vector<double>>());
     // set rotation matrices
-    const auto R_l = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["R_left"].as<std::vector<double>>());
-    const auto R_r = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["R_right"].as<std::vector<double>>());
+    const cv::Mat R_l = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["R_left"].as<std::vector<double>>());
+    const cv::Mat R_r = parse_vector_as_mat(cv::Size(3, 3), cfg->yaml_node_["StereoRectifier"]["R_right"].as<std::vector<double>>());
+
     // set distortion parameters depending on the camera model
     const auto D_l_vec = cfg->yaml_node_["StereoRectifier"]["D_left"].as<std::vector<double>>();
     const auto D_r_vec = cfg->yaml_node_["StereoRectifier"]["D_right"].as<std::vector<double>>();

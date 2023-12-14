@@ -49,3 +49,8 @@ cmake-build-release/
 #visual studo and visual studio coded
 .vscode/
 .vs/
+
+#output
+frame_trajectory.txt
+keyframe_trajectory.txt
+track_times.txt
