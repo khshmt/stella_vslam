@@ -11,6 +11,7 @@
 #include "stella_vslam/util/stereo_rectifier.h"
 #include "stella_vslam/util/image_converter.h"
 #include "stella_vslam/util/yaml.h"
+#include "stella_vslam/camera/perspective.h"
 
 #include <iostream>
 #include <algorithm>
@@ -159,7 +160,8 @@ void stereo_tracking(const std::shared_ptr<stella_vslam::config>& cfg,
     const euroc_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
 
-    const stella_vslam::util::stereo_rectifier rectifier(cfg);
+    const std::unique_ptr<stella_vslam::camera::perspective> camera = std::make_unique<stella_vslam::camera::perspective>(cfg->yaml_node_["Camera"]);
+    const stella_vslam::util::stereo_rectifier rectifier(cfg, camera.get());
 
     // build a SLAM system
     stella_vslam::system SLAM(cfg, vocab_file_path);

@@ -60,7 +60,7 @@
         "_comment": "if you installed dependcies system wide using apt or other wise remove the nex two lines",
         "CMAKE_TOOLCHAIN_FILE": {
           "type": "FILEPATH",
-          "value": "~/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          "value": "~//vcpkg/vcpkg_slam/scripts/buildsystems/vcpkg.cmake"
         }
       },
       "condition": {

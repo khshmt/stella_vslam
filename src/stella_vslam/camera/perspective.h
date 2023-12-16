@@ -73,6 +73,8 @@ public:
     cv::Mat cv_dist_params_;
     //! distortion params in Eigen format
     Vec5_t eigen_dist_params_;
+    //! yaml file has no rectification params
+    bool rectification_params_calculated_ = true;
 };
 
 std::ostream& operator<<(std::ostream& os, const perspective& params);
