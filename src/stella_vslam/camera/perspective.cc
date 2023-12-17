@@ -17,16 +17,13 @@ perspective::perspective(const std::string& name, const setup_type_t& setup_type
       fx_(fx), fy_(fy), cx_(cx), cy_(cy), fx_inv_(1.0 / fx), fy_inv_(1.0 / fy),
       k1_(k1), k2_(k2), p1_(p1), p2_(p2), k3_(k3) {
     spdlog::debug("CONSTRUCT: camera::perspective");
-    if (fx_ == 0.0 && fy_ == 0.0 && cy_ == 0.0 && cx_ == 0.0) {
-        rectification_params_calculated_ = false;
-    }
-    else {
-        cv_cam_matrix_ = (cv::Mat_<float>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
-        cv_dist_params_ = (cv::Mat_<float>(5, 1) << k1_, k2_, p1_, p2_, k3_);
 
-        eigen_cam_matrix_ << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1;
-        eigen_dist_params_ << k1_, k2_, p1_, p2_, k3_;
-    }
+    cv_cam_matrix_ = (cv::Mat_<float>(3, 3) << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1);
+    cv_dist_params_ = (cv::Mat_<float>(5, 1) << k1_, k2_, p1_, p2_, k3_);
+
+    eigen_cam_matrix_ << fx_, 0, cx_, 0, fy_, cy_, 0, 0, 1;
+    eigen_dist_params_ << k1_, k2_, p1_, p2_, k3_;
+
     img_bounds_ = compute_image_bounds();
 
     inv_cell_width_ = static_cast<double>(num_grid_cols_) / (img_bounds_.max_x_ - img_bounds_.min_x_);
@@ -40,15 +37,15 @@ perspective::perspective(const YAML::Node& yaml_node)
                   yaml_node["cols"].as<unsigned int>(),
                   yaml_node["rows"].as<unsigned int>(),
                   yaml_node["fps"].as<double>(),
-                  yaml_node["fx"].IsDefined() ? yaml_node["fx"].as<double>() : 0.0,
-                  yaml_node["fy"].IsDefined() ? yaml_node["fy"].as<double>() : 0.0,
-                  yaml_node["cx"].IsDefined() ? yaml_node["cx"].as<double>() : 0.0,
-                  yaml_node["cy"].IsDefined() ? yaml_node["cy"].as<double>() : 0.0,
-                  yaml_node["k1"].IsDefined() ? yaml_node["k1"].as<double>() : 0.0,
-                  yaml_node["k2"].IsDefined() ? yaml_node["k2"].as<double>() : 0.0,
-                  yaml_node["p1"].IsDefined() ? yaml_node["p1"].as<double>() : 0.0,
-                  yaml_node["p2"].IsDefined() ? yaml_node["p2"].as<double>() : 0.0,
-                  yaml_node["k3"].IsDefined() ? yaml_node["k3"].as<double>() : 0.0,
+                  yaml_node["fx"].as<double>(),
+                  yaml_node["fy"].as<double>(),
+                  yaml_node["cx"].as<double>(),
+                  yaml_node["cy"].as<double>(),
+                  yaml_node["k1"].as<double>(),
+                  yaml_node["k2"].as<double>(),
+                  yaml_node["p1"].as<double>(),
+                  yaml_node["p2"].as<double>(),
+                  yaml_node["k3"].as<double>(),
                   yaml_node["focal_x_baseline"].as<double>(0.0),
                   yaml_node["depth_threshold"].as<double>(40.0)) {}
 

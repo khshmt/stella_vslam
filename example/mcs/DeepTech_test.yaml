@@ -1,43 +1,58 @@
-# DeepTech_test stereo model
+# EuRoC stereo model
 
 # intrinsic parameters after stereo-rectification are written
 Camera:
   name: "EuRoC stereo"
   setup: "stereo"
   model: "perspective"
-  rectify: "true"
+
+  # new "rectified" matrices is the first three cols of the projection matrix which is calculated with cv::stereoRectify()
+  # e.g. fx = P1[0][0] or P2[0][0], cx = P1[0][2] or P2[0][2]
+  #      fy = P1[1][1] or P2[1][1], cy = P1[1][2] or P2[1][2]
+
+  fx: 925.50479743
+  fy: 925.50479743
+  cx: 719.77327728
+  cy: 545.32481384
+
+  # there is no distortion after stereo rectification
+
+  k1: 0.0
+  k2: 0.0
+  p1: 0.0
+  p2: 0.0
+  k3: 0.0
 
   # focal_x_baseline is -P2[0][3] which is calculated with cv::stereoRectify()
 
   fps: 20.0
   cols: 1376
   rows: 1100
-  focal_x_baseline: 149.40543637139198
+  focal_x_baseline: 138.31765137
   depth_threshold: 40
 
   color_order: "Gray"
 
 # original intrinsic parameters (K, D) and stereo-recitification parameters (R)
 # matrices (K, R) are written in row-major order
+
 StereoRectifier:
   K_left: [923.127713710528, 0.0, 687.4228471324863, 0.0, 925.2110354167382, 546.3225816092311, 0.0, 0.0, 1.0]
   D_left: [-0.1705266572420859, 0.09052954356608053, 0.0008524091088442974, 0.00014363914590400428, 0.0]
-
+  R_left:
+    [
+      9.99532994e-01,  1.76244204e-02, -2.49634475e-02,
+      -1.76050474e-02,  9.99844523e-01,  9.95635518e-04,
+      2.49771138e-02, -5.55687873e-04,  9.99687869e-01,
+    ]
   K_right: [923.0960152412666, 0.0, 675.9074027774546, 0.0, 925.7985594359268, 543.1698626136331, 0.0, 0.0, 1]
   D_right: [-0.17336344196754927, 0.0969413015313159, 0.0002351104695664023, 0.00033062719152664123, 0.0]
-
-  Rot_leftCam_to_rightCam: [
-    0.9998011594343311, 
-    0.019937510930602562, 
-    -0.0003704749129950495, 
-    -0.019936812872882174, 
-    0.9997996198762341, 
-    0.0018009963384764628, 
-    0.00040630806137048066, 
-    -0.001793252138331271, 
-    0.9999983095788358
-  ]
-  Trans_leftCam_to_rightCam: [0.14940543637139198, -0.000351444945639901, -0.0036748354043960475]
+  R_right:
+    [
+      9.99694882e-01, -2.35157249e-03, -2.45888920e-02,
+      2.33249543e-03,  9.99996956e-01, -8.04492567e-04,
+      2.45907090e-02,  7.46893623e-04,  9.99697324e-01,
+    ]
 
 Preprocessing:
   min_size: 800

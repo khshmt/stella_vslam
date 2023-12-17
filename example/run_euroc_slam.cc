@@ -160,7 +160,8 @@ void stereo_tracking(const std::shared_ptr<stella_vslam::config>& cfg,
     const euroc_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
 
-    const std::unique_ptr<stella_vslam::camera::perspective> camera = std::make_unique<stella_vslam::camera::perspective>(cfg->yaml_node_["Camera"]);
+    const std::unique_ptr<stella_vslam::camera::perspective> camera = 
+        std::make_unique<stella_vslam::camera::perspective>(cfg->yaml_node_["Camera"]);
     const stella_vslam::util::stereo_rectifier rectifier(cfg, camera.get());
 
     // build a SLAM system

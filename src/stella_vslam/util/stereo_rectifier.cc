@@ -28,36 +28,26 @@ stereo_rectifier::stereo_rectifier(camera::base* camera, const YAML::Node& yaml_
     const auto K_l = parse_vector_as_mat(cv::Size(3, 3), yaml_node["K_left"].as<std::vector<double>>());
     const auto K_r = parse_vector_as_mat(cv::Size(3, 3), yaml_node["K_right"].as<std::vector<double>>());
     // set rotation matrices
-    cv::Mat R_l;
-    cv::Mat R_r;
+    const auto R_l = parse_vector_as_mat(cv::Size(3, 3), yaml_node["R_left"].as<std::vector<double>>());
+    const auto R_r = parse_vector_as_mat(cv::Size(3, 3), yaml_node["R_right"].as<std::vector<double>>());
     // set distortion parameters depending on the camera model
     const auto D_l_vec = yaml_node["D_left"].as<std::vector<double>>();
     const auto D_r_vec = yaml_node["D_right"].as<std::vector<double>>();
     const auto D_l = parse_vector_as_mat(cv::Size(1, D_l_vec.size()), D_l_vec);
     const auto D_r = parse_vector_as_mat(cv::Size(1, D_r_vec.size()), D_r_vec);
     // get camera matrix after rectification
-    cv::Mat K_rect_l, K_rect_r;
-    if (static_cast<camera::perspective*>(camera)->rectification_params_calculated_) {
-        R_l = parse_vector_as_mat(cv::Size(3, 3), yaml_node["R_left"].as<std::vector<double>>());
-        R_r = parse_vector_as_mat(cv::Size(3, 3), yaml_node["R_right"].as<std::vector<double>>());
-        K_rect_l = static_cast<camera::perspective*>(camera)->cv_cam_matrix_;
-        K_rect_l = K_rect_r;
-    }
-    else {
-        const auto R_left_to_right = parse_vector_as_mat(cv::Size(3, 3), yaml_node["Rot_leftCam_to_rightCam"].as<std::vector<double>>());
-        const auto T_left_to_right = parse_vector_as_mat(cv::Size(3, 3), yaml_node["Trans_leftCam_to_rightCam"].as<std::vector<double>>());
-        cv::stereoRectify(K_l, D_l, K_r, D_r, img_size, R_left_to_right, T_left_to_right, R_l, R_r, K_rect_l, K_rect_r, cv::noArray());
-    }
+    const auto K_rect = static_cast<camera::perspective*>(camera)->cv_cam_matrix_;
+
     // create undistortion maps
     switch (model_type_) {
         case camera::model_type_t::Perspective: {
-            cv::initUndistortRectifyMap(K_l, D_l, R_l, K_rect_l, img_size, CV_32F, undist_map_x_l_, undist_map_y_l_);
-            cv::initUndistortRectifyMap(K_r, D_r, R_r, K_rect_r, img_size, CV_32F, undist_map_x_r_, undist_map_y_r_);
+            cv::initUndistortRectifyMap(K_l, D_l, R_l, K_rect, img_size, CV_32F, undist_map_x_l_, undist_map_y_l_);
+            cv::initUndistortRectifyMap(K_r, D_r, R_r, K_rect, img_size, CV_32F, undist_map_x_r_, undist_map_y_r_);
             break;
         }
         case camera::model_type_t::Fisheye: {
-            cv::fisheye::initUndistortRectifyMap(K_l, D_l, R_l, K_rect_l, img_size, CV_32F, undist_map_x_l_, undist_map_y_l_);
-            cv::fisheye::initUndistortRectifyMap(K_r, D_r, R_r, K_rect_r, img_size, CV_32F, undist_map_x_r_, undist_map_y_r_);
+            cv::fisheye::initUndistortRectifyMap(K_l, D_l, R_l, K_rect, img_size, CV_32F, undist_map_x_l_, undist_map_y_l_);
+            cv::fisheye::initUndistortRectifyMap(K_r, D_r, R_r, K_rect, img_size, CV_32F, undist_map_x_r_, undist_map_y_r_);
             break;
         }
         default: {
