@@ -1,5 +1,9 @@
 # KITTI stereo model for seq.03
 
+System:
+  num_grid_cols: 40
+  num_grid_rows: 13
+
 #==============#
 # Camera Model #
 #==============#
@@ -31,6 +35,9 @@ Camera:
 #=====================#
 # Tracking Parameters #
 #=====================#
+
+Tracking:
+  margin_last_frame_projection: 10.0
 
 Preprocessing:
   min_size: 800

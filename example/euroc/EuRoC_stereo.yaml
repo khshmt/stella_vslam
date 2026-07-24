@@ -86,6 +86,7 @@ Mapping:
 Tracking:
   backend: "g2o"
   enable_temporal_keyframe_only_tracking: false
+  margin_last_frame_projection: 10.0
 
 KeyframeInserter:
   wait_for_local_bundle_adjustment: false
@@ -101,6 +102,8 @@ Initializer:
 
 System:
   map_format: "msgpack"
+  num_grid_cols: 47
+  num_grid_rows: 30
 
 PangolinViewer:
   keyframe_size: 0.07

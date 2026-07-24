@@ -3,6 +3,7 @@
 #include "stella_vslam/data/marker.h"
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/marker_model/base.h"
+#include "stella_vslam/module/marker_initializer.h"
 #include "stella_vslam/module/keyframe_inserter.h"
 
 #include <spdlog/spdlog.h>
@@ -17,7 +18,8 @@ keyframe_inserter::keyframe_inserter(const double max_interval,
                                      const double lms_ratio_thr_almost_all_lms_are_tracked,
                                      const double lms_ratio_thr_view_changed,
                                      const unsigned int enough_lms_thr,
-                                     const bool wait_for_local_bundle_adjustment)
+                                     const bool wait_for_local_bundle_adjustment,
+                                     const size_t required_keyframes_for_marker_initialization)
     : max_interval_(max_interval),
       min_interval_(min_interval),
       max_distance_(max_distance),
@@ -25,7 +27,8 @@ keyframe_inserter::keyframe_inserter(const double max_interval,
       lms_ratio_thr_almost_all_lms_are_tracked_(lms_ratio_thr_almost_all_lms_are_tracked),
       lms_ratio_thr_view_changed_(lms_ratio_thr_view_changed),
       enough_lms_thr_(enough_lms_thr),
-      wait_for_local_bundle_adjustment_(wait_for_local_bundle_adjustment) {}
+      wait_for_local_bundle_adjustment_(wait_for_local_bundle_adjustment),
+      required_keyframes_for_marker_initialization_(required_keyframes_for_marker_initialization) {}
 
 keyframe_inserter::keyframe_inserter(const YAML::Node& yaml_node)
     : keyframe_inserter(yaml_node["max_interval"].as<double>(1.0),
@@ -35,7 +38,8 @@ keyframe_inserter::keyframe_inserter(const YAML::Node& yaml_node)
                         yaml_node["lms_ratio_thr_almost_all_lms_are_tracked"].as<double>(0.9),
                         yaml_node["lms_ratio_thr_view_changed"].as<double>(0.5),
                         yaml_node["enough_lms_thr"].as<unsigned int>(100),
-                        yaml_node["wait_for_local_bundle_adjustment"].as<bool>(false)) {}
+                        yaml_node["wait_for_local_bundle_adjustment"].as<bool>(false),
+                        yaml_node["required_keyframes_for_marker_initialization"].as<unsigned int>(3)) {}
 
 void keyframe_inserter::set_mapping_module(mapping_module* mapper) {
     mapper_ = mapper;
@@ -76,16 +80,23 @@ bool keyframe_inserter::new_keyframe_is_needed(data::map_database* map_db,
     if (min_interval_ > 0.0) {
         min_interval_elapsed = !last_inserted_keyfrm || last_inserted_keyfrm->timestamp_ + min_interval_ <= curr_frm.timestamp_;
     }
+    float distance_traveled = -1.0;
+    if (last_inserted_keyfrm) {
+        distance_traveled = (last_inserted_keyfrm->get_trans_wc() - curr_frm.get_trans_wc()).norm();
+    }
     bool max_distance_traveled = false;
     if (max_distance_ > 0.0) {
-        max_distance_traveled = last_inserted_keyfrm && (last_inserted_keyfrm->get_trans_wc() - curr_frm.get_trans_wc()).norm() > max_distance_;
+        max_distance_traveled = last_inserted_keyfrm && distance_traveled > max_distance_;
     }
     bool min_distance_traveled = true;
     if (min_distance_ > 0.0) {
-        min_distance_traveled = !last_inserted_keyfrm || (last_inserted_keyfrm->get_trans_wc() - curr_frm.get_trans_wc()).norm() > min_distance_;
+        min_distance_traveled = !last_inserted_keyfrm || distance_traveled > min_distance_;
     }
     // New keyframe is needed if the field-of-view of the current frame is changed a lot
-    const bool view_changed = num_reliable_lms < num_reliable_lms_ref * lms_ratio_thr_view_changed_;
+    bool view_changed = false;
+    if (lms_ratio_thr_view_changed_ > 0.0) {
+        view_changed = num_reliable_lms < num_reliable_lms_ref * lms_ratio_thr_view_changed_;
+    }
     // const bool view_changed = num_tracked_lms < num_tracked_lms_on_ref_keyfrm * lms_ratio_thr_view_changed_;
     const bool not_enough_lms = num_reliable_lms < enough_lms_thr_;
 
@@ -94,7 +105,10 @@ bool keyframe_inserter::new_keyframe_is_needed(data::map_database* map_db,
     // and concurrently the ratio of the reliable 3D points larger than the threshold ratio
     constexpr unsigned int num_tracked_lms_thr_unstable = 15;
     bool tracking_is_unstable = num_tracked_lms < num_tracked_lms_thr_unstable;
-    bool almost_all_lms_are_tracked = num_reliable_lms > num_reliable_lms_ref * lms_ratio_thr_almost_all_lms_are_tracked_;
+    bool almost_all_lms_are_tracked = false;
+    if (lms_ratio_thr_almost_all_lms_are_tracked_ > 0.0) {
+        almost_all_lms_are_tracked = num_reliable_lms > num_reliable_lms_ref * lms_ratio_thr_almost_all_lms_are_tracked_;
+    }
     SPDLOG_TRACE("keyframe_inserter: num_reliable_lms_ref={}", num_reliable_lms_ref);
     SPDLOG_TRACE("keyframe_inserter: num_reliable_lms={}", num_reliable_lms);
     SPDLOG_TRACE("keyframe_inserter: max_interval_elapsed={}", max_interval_elapsed);
@@ -133,7 +147,9 @@ std::shared_ptr<data::keyframe> keyframe_inserter::create_new_keyframe(
         }
         // Set the association to the new marker
         keyfrm->add_marker(marker);
-        marker->observations_.push_back(keyfrm);
+        marker->observations_.emplace(keyfrm->id_, keyfrm);
+
+        marker_initializer::check_marker_initialization(*marker, required_keyframes_for_marker_initialization_);
     }
 
     // Queue up the keyframe to the mapping module
@@ -143,8 +159,8 @@ std::shared_ptr<data::keyframe> keyframe_inserter::create_new_keyframe(
 
     // Save the valid depth and index pairs
     std::vector<std::pair<float, unsigned int>> depth_idx_pairs;
-    depth_idx_pairs.reserve(curr_frm.frm_obs_.num_keypts_);
-    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.num_keypts_; ++idx) {
+    depth_idx_pairs.reserve(curr_frm.frm_obs_.undist_keypts_.size());
+    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.undist_keypts_.size(); ++idx) {
         assert(!curr_frm.frm_obs_.depths_.empty());
         const auto depth = curr_frm.frm_obs_.depths_.at(idx);
         // Add if the depth is valid

@@ -127,7 +127,7 @@ public:
     //-----------------------------------------
     // data feeding methods
 
-    std::shared_ptr<Mat44_t> feed_frame(const data::frame& frm, const cv::Mat& img);
+    std::shared_ptr<Mat44_t> feed_frame(const data::frame& frm, const cv::Mat& img, double extraction_time_elapsed_ms);
 
     //! Feed a monocular frame to SLAM system
     //! (NOTE: distorted images are acceptable if calibrated)
@@ -231,6 +231,9 @@ private:
     //! mapping thread
     std::unique_ptr<std::thread> mapping_thread_ = nullptr;
 
+    //! next frame ID
+    std::atomic<unsigned int> next_frame_id_{0};
+
     //! global optimization module
     global_optimization_module* global_optimizer_ = nullptr;
     //! global optimization thread
@@ -243,6 +246,11 @@ private:
     feature::orb_extractor* extractor_right_ = nullptr;
     //! ORB extractor only when used in initializing
     feature::orb_extractor* ini_extractor_left_ = nullptr;
+
+    //! number of columns of grid to accelerate reprojection matching
+    unsigned int num_grid_cols_ = 64;
+    //! number of rows of grid to accelerate reprojection matching
+    unsigned int num_grid_rows_ = 48;
 
     //! marker detector
     marker_detector::base* marker_detector_ = nullptr;

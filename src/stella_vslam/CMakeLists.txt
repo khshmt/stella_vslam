@@ -24,7 +24,7 @@ find_package(g2o REQUIRED
              g2o::csparse)
 
 # gtsam
-set(USE_GTSAM ON CACHE BOOL "Enable gtsam")
+set(USE_GTSAM OFF CACHE BOOL "Enable gtsam")
 unset(GTSAM_INCLUDE_DIRS CACHE)
 find_path(GTSAM_INCLUDE_DIRS NAMES gtsam
           PATHS /usr/local/include/)
@@ -69,6 +69,18 @@ else()
     message(FATAL_ERROR "Invalid BoW framework: ${BOW_FRAMEWORK}")
 endif()
 
+# cuda_efficient_features
+set(USE_CUDA_EFFICIENT_DESCRIPTORS OFF CACHE BOOL "Enable cuda_efficient_features")
+find_path(cuda_efficient_features_INCLUDE_DIR NAMES cuda_efficient_features.h)
+find_library(cuda_efficient_features_LIBRARY NAMES cuda_efficient_features)
+find_package_handle_standard_args(cuda_efficient_features DEFAULT_MSG cuda_efficient_features_LIBRARY cuda_efficient_features_INCLUDE_DIR)
+if(USE_CUDA_EFFICIENT_DESCRIPTORS AND cuda_efficient_features_FOUND)
+    message(STATUS "cuda_efficient_features: enabled")
+else()
+    message(STATUS "cuda_efficient_features: disabled")
+    set(USE_CUDA_EFFICIENT_DESCRIPTORS OFF)
+endif()
+
 # ----- Create stella_vslam library -----
 
 add_library(${PROJECT_NAME}
@@ -91,6 +103,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 
 # ----- Compile configuration -----
+
+# cuda_efficient_features
+if (USE_CUDA_EFFICIENT_DESCRIPTORS)
+    find_package(OpenCV REQUIRED core features2d cudev cudafilters cudaimgproc cudawarping)
+    find_package(CUDAToolkit REQUIRED)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC USE_CUDA_EFFICIENT_DESCRIPTORS)
+endif ()
 
 # gtsam
 if (USE_GTSAM)
@@ -169,6 +188,20 @@ else()
     message(STATUS "Determinism: DISABLED")
 endif()
 
+# Tracy
+set(USE_TRACY OFF CACHE BOOL "Enable tracy")
+if(USE_TRACY)
+    message(STATUS "tracy: ENABLED")
+    # Gperftools
+    find_package(Tracy REQUIRED)
+else()
+    message(STATUS "tracy: DISABLED")
+endif()
+if(USE_TRACY)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DTRACY_ENABLE=1)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Tracy::TracyClient)
+endif()
+
 # ----- Configure stella_vslam library -----
 
 # Include directories
@@ -193,7 +226,8 @@ target_link_libraries(${PROJECT_NAME}
                       opencv_core
                       opencv_features2d
                       opencv_calib3d
-                      "$<$<BOOL:${USE_ARUCO}>:opencv_aruco>"
+                      "$<$<BOOL:${LINK_OBJDETECT}>:opencv_objdetect>"
+                      "$<$<BOOL:${LINK_ARUCO}>:opencv_aruco>"
                       g2o::core
                       g2o::stuff
                       g2o::types_sba
@@ -207,8 +241,10 @@ target_link_libraries(${PROJECT_NAME}
                       ${SUITESPARSE_LIBRARIES}
                       ${BoW_LIBRARY}
                       "$<$<BOOL:${spdlog_FOUND}>:spdlog::spdlog>"
+                      "$<$<BOOL:${USE_CUDA_EFFICIENT_DESCRIPTORS}>:${cuda_efficient_features_LIBRARY};opencv_cudafilters;opencv_cudawarping>"
                       PRIVATE
-                      ${LAPACK_LIBRARIES})
+                      ${LAPACK_LIBRARIES}
+                      "$<$<BOOL:${USE_CUDA_EFFICIENT_DESCRIPTORS}>:CUDA::cudart;CUDA::cublas>")
 
 # ----- Install configuration -----
 

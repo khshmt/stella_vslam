@@ -26,7 +26,8 @@ mapping_module::mapping_module(const YAML::Node& yaml_node, data::map_database* 
       num_covisibilities_for_landmark_generation_(yaml_node["num_covisibilities_for_landmark_generation"].as<unsigned int>(10)),
       num_covisibilities_for_landmark_fusion_(yaml_node["num_covisibilities_for_landmark_fusion"].as<unsigned int>(10)),
       erase_temporal_keyframes_(yaml_node["erase_temporal_keyframes"].as<bool>(false)),
-      num_temporal_keyframes_(yaml_node["num_temporal_keyframes"].as<unsigned int>(15)) {
+      num_temporal_keyframes_(yaml_node["num_temporal_keyframes"].as<unsigned int>(15)),
+      residual_rad_thr_(yaml_node["residual_deg_thr"].as<float>(0.2) * M_PI / 180.0) {
     spdlog::debug("CONSTRUCT: mapping_module");
 
     spdlog::debug("load mapping parameters");
@@ -109,7 +110,7 @@ void mapping_module::run() {
         // create and extend the map with the new keyframe
         mapping_with_new_keyframe();
         // send the new keyframe to the global optimization module
-        if (!cur_keyfrm_->graph_node_->is_spanning_root()) {
+        if (global_optimizer_ && !cur_keyfrm_->graph_node_->is_spanning_root()) {
             global_optimizer_->queue_keyframe(cur_keyfrm_);
         }
     }
@@ -246,7 +247,7 @@ void mapping_module::mapping_with_new_keyframe() {
 
 void mapping_module::store_new_keyframe() {
     // compute BoW feature vector
-    if (!cur_keyfrm_->bow_is_available()) {
+    if (bow_vocab_ && !cur_keyfrm_->bow_is_available()) {
         cur_keyfrm_->compute_bow(bow_vocab_);
     }
 
@@ -276,8 +277,8 @@ void mapping_module::create_new_landmarks(std::atomic<bool>& abort_create_new_la
     // in order to triangulate landmarks between `cur_keyfrm_` and each of the covisibilities
     const auto cur_covisibilities = cur_keyfrm_->graph_node_->get_top_n_covisibilities(num_covisibilities_for_landmark_generation_);
 
-    // lowe's_ratio will not be used
-    match::robust robust_matcher(0.0, false);
+    match::bow_tree bow_tree_matcher(0.95, false);
+    match::robust robust_matcher(0.95, false);
 
     // camera center of the current keyframe
     const Vec3_t cur_cam_center = cur_keyfrm_->get_trans_wc();
@@ -300,8 +301,14 @@ void mapping_module::create_new_landmarks(std::atomic<bool>& abort_create_new_la
 
         // if the scene scale is much smaller than the baseline, abort the triangulation
         if (use_baseline_dist_thr_ratio_) {
-            const float median_depth_in_ngh = ngh_keyfrm->compute_median_depth(true);
-            if (baseline_dist < baseline_dist_thr_ratio_ * median_depth_in_ngh) {
+            float median_scale_in_ngh;
+            if (ngh_keyfrm->camera_->model_type_ == camera::model_type_t::Equirectangular) {
+                median_scale_in_ngh = ngh_keyfrm->compute_median_distance();
+            }
+            else {
+                median_scale_in_ngh = ngh_keyfrm->compute_median_depth(true);
+            }
+            if (baseline_dist < baseline_dist_thr_ratio_ * median_scale_in_ngh) {
                 continue;
             }
         }
@@ -321,7 +328,12 @@ void mapping_module::create_new_landmarks(std::atomic<bool>& abort_create_new_la
 
         // vector of matches (idx in the current, idx in the neighbor)
         std::vector<std::pair<unsigned int, unsigned int>> matches;
-        robust_matcher.match_for_triangulation(cur_keyfrm_, ngh_keyfrm, E_ngh_to_cur, matches);
+        if (bow_db_ && bow_vocab_) {
+            bow_tree_matcher.match_for_triangulation(cur_keyfrm_, ngh_keyfrm, E_ngh_to_cur, matches, residual_rad_thr_);
+        }
+        else {
+            robust_matcher.match_for_triangulation(cur_keyfrm_, ngh_keyfrm, E_ngh_to_cur, matches, residual_rad_thr_);
+        }
 
         // triangulation
         triangulate_with_two_keyframes(cur_keyfrm_, ngh_keyfrm, matches);

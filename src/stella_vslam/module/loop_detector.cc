@@ -57,7 +57,16 @@ bool loop_detector::detect_loop_candidates() {
 }
 
 void loop_detector::add_loop_candidate(const std::shared_ptr<data::keyframe>& keyfrm) {
-    loop_candidates_to_validate_.insert(keyfrm);
+    if (top_n_covisibilities_to_search_ > 0) {
+        loop_candidates_to_validate_.insert(keyfrm);
+        auto covisibilities = keyfrm->graph_node_->get_top_n_covisibilities(top_n_covisibilities_to_search_);
+        for (const auto& covisibility : covisibilities) {
+            loop_candidates_to_validate_.insert(covisibility);
+        }
+    }
+    else {
+        loop_candidates_to_validate_.insert(keyfrm);
+    }
 }
 
 bool loop_detector::detect_loop_candidates_impl() {
@@ -424,7 +433,7 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
         const auto inlier_indices = util::resample_by_indices(valid_indices, pnp_solver->get_inlier_flags());
 
         // Set 2D-3D matches for the pose optimization
-        auto lms_in_cand = std::vector<std::shared_ptr<data::landmark>>(cur_keyfrm_->frm_obs_.num_keypts_, nullptr);
+        auto lms_in_cand = std::vector<std::shared_ptr<data::landmark>>(cur_keyfrm_->frm_obs_.undist_keypts_.size(), nullptr);
         for (const auto idx : inlier_indices) {
             // Set only the valid 3D points to the current frame
             lms_in_cand.at(idx) = curr_match_lms_observed_in_cand.at(idx);
@@ -445,7 +454,7 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
         }
 
         // Reject outliers
-        for (unsigned int idx = 0; idx < cur_keyfrm_->frm_obs_.num_keypts_; idx++) {
+        for (unsigned int idx = 0; idx < cur_keyfrm_->frm_obs_.undist_keypts_.size(); idx++) {
             if (!outlier_flags.at(idx)) {
                 continue;
             }
@@ -486,7 +495,7 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
 
         // Exclude the already-associated landmarks
         std::set<std::shared_ptr<data::landmark>> already_found_landmarks1;
-        for (unsigned int idx = 0; idx < cur_keyfrm_->frm_obs_.num_keypts_; ++idx) {
+        for (unsigned int idx = 0; idx < cur_keyfrm_->frm_obs_.undist_keypts_.size(); ++idx) {
             if (!curr_match_lms_observed_in_cand.at(idx)) {
                 continue;
             }
@@ -518,7 +527,7 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
         }
 
         // Reject outliers
-        for (unsigned int idx = 0; idx < cur_keyfrm_->frm_obs_.num_keypts_; ++idx) {
+        for (unsigned int idx = 0; idx < cur_keyfrm_->frm_obs_.undist_keypts_.size(); ++idx) {
             if (!outlier_flags2.at(idx)) {
                 continue;
             }
