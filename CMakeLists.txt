@@ -85,6 +85,20 @@ endif()
 
 # ----- Find dependencies -----
 
+# ONNX Runtime (公式バイナリ /usr/local にインストール済み)
+find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h
+    PATHS /usr/local/include /usr/local/include/onnxruntime
+    NO_DEFAULT_PATH)
+find_library(ONNXRUNTIME_LIBRARY onnxruntime
+    PATHS /usr/local/lib
+    NO_DEFAULT_PATH)
+if(ONNXRUNTIME_INCLUDE_DIR AND ONNXRUNTIME_LIBRARY)
+    message(STATUS "ONNX Runtime: Found (include: ${ONNXRUNTIME_INCLUDE_DIR}, lib: ${ONNXRUNTIME_LIBRARY})")
+else()
+    message(STATUS "ONNX Runtime: NOT found (LiftFeat extractor disabled)")
+    set(ONNXRUNTIME_FOUND OFF)
+endif()
+
 # Threads
 find_package(Threads REQUIRED)
 
@@ -169,7 +183,7 @@ set(STELLA_VSLAM_PROJECT_CONFIG ${STELLA_VSLAM_GENERATED_DIR}/${PROJECT_NAME}Con
 set(STELLA_VSLAM_TARGETS_EXPORT_NAME ${PROJECT_NAME}Targets)
 set(STELLA_VSLAM_CONFIG_INSTALL_DIR lib/cmake/${PROJECT_NAME})
 set(STELLA_VSLAM_NAMESPACE "${PROJECT_NAME}::")
-set(STELLA_VSLAM_VERSION 0.6.0)
+set(STELLA_VSLAM_VERSION 0.7.0)
 
 # Create a version config file
 write_basic_package_version_file(${STELLA_VSLAM_VERSION_CONFIG}
